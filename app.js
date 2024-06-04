@@ -1,70 +1,50 @@
+// Get references to the buttons and recordings list
 const recordButton = document.getElementById('recordButton');
 const stopButton = document.getElementById('stopButton');
 const recordingsList = document.getElementById('recordingsList');
 
 let mediaRecorder;
 let audioChunks = [];
-let audioContext;
-let mediaStreamSource;
-let processor;
-let filter;
 
+// Event listener for the record button
 recordButton.addEventListener('click', async () => {
+    // Request permission to access the microphone
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    mediaStreamSource = audioContext.createMediaStreamSource(stream);
-
-    // Create a BiquadFilterNode (e.g., lowpass filter)
-    filter = audioContext.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1000, audioContext.currentTime);
-
-    // Connect the filter to the destination
-    mediaStreamSource.connect(filter);
-    filter.connect(audioContext.destination);
-
-    // Create a ScriptProcessorNode to handle the audio processing
-    processor = audioContext.createScriptProcessor(1024, 1, 1);
-    mediaStreamSource.connect(processor);
-    processor.connect(audioContext.destination);
-
-    processor.onaudioprocess = (e) => {
-        const inputBuffer = e.inputBuffer;
-        const outputBuffer = e.outputBuffer;
-
-        // Apply the filter to the input buffer
-        for (let channel = 0; channel < inputBuffer.numberOfChannels; channel++) {
-            const inputData = inputBuffer.getChannelData(channel);
-            const outputData = outputBuffer.getChannelData(channel);
-
-            for (let sample = 0; sample < inputBuffer.length; sample++) {
-                outputData[sample] = inputData[sample]; // Apply filter logic here
-            }
-        }
-    };
-
+    // Create a MediaRecorder instance
     mediaRecorder = new MediaRecorder(stream);
+
+    // Start recording
     mediaRecorder.start();
 
+    // Disable the record button and enable the stop button
     recordButton.disabled = true;
     stopButton.disabled = false;
 
+    // Event listener for when the data is available
     mediaRecorder.addEventListener('dataavailable', event => {
         audioChunks.push(event.data);
     });
 
+    // Event listener for when the recording stops
     mediaRecorder.addEventListener('stop', () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        // Create a blob from the audio chunks
+        const audioBlob = arrayBufferToBlob(audioChunks, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Create an audio element and set its source to the audio URL
         const audio = document.createElement('audio');
         audio.src = audioUrl;
         audio.controls = true;
 
+        // Create a list item and append the audio element to it
         const li = document.createElement('li');
         li.appendChild(audio);
+
+        // Append the list item to the recordings list
         recordingsList.appendChild(li);
 
+        // Reset the audio chunks array
         audioChunks = [];
     });
 });
@@ -73,11 +53,7 @@ stopButton.addEventListener('click', () => {
     mediaRecorder.stop();
     recordButton.disabled = false;
     stopButton.disabled = true;
-    processor.disconnect();
-    filter.disconnect();
-    mediaStreamSource.disconnect();
 });
-
 
 
 
