@@ -27,11 +27,13 @@ recordButton.addEventListener('click', async () => {
     });
 
     // Event listener for when the recording stops
-    mediaRecorder.addEventListener('stop', () => {
+    mediaRecorder.addEventListener('stop', async () => {
         // Create a blob from the audio chunks
-        const audioBlob = arrayBufferToBlob(audioChunks, { type: 'audio/wav' });
+        const audioBlob = arrayBufferToBlob(audioChunks, mediaRecorder);
+        console.log(audioChunks)
         const audioUrl = URL.createObjectURL(audioBlob);
-
+        // const audioB64 = await blobToBase64(audioBlob)
+        // console.info("Audio B64"+ audioB64)
         // Create an audio element and set its source to the audio URL
         const audio = document.createElement('audio');
         audio.src = audioUrl;
@@ -56,10 +58,19 @@ stopButton.addEventListener('click', () => {
 });
 
 
+// save blob to file
+function arrayBufferToFile(buffer, mediaRecorder) {
+    return new File(
+        buffer,
+        `./my-file.${mediaRecorder.mimeType.match(/\/([\w\d]+);?/)[1]}`,
+        { type: mediaRecorder.mimeType }
+    );
+}
+
 
 // Utility function to convert ArrayBuffer to Blob
-function arrayBufferToBlob(buffer, type) {
-    return new Blob(buffer, { type: type });
+function arrayBufferToBlob(buffer, mediaRecorder) {
+    return new Blob(buffer, {type: mediaRecorder.mimeType });
 }
 
 // Utility function to convert Blob to ArrayBuffer
