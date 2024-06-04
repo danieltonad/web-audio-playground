@@ -59,7 +59,7 @@ stopButton.addEventListener('click', () => {
 
 // Utility function to convert ArrayBuffer to Blob
 function arrayBufferToBlob(buffer, type) {
-    return new Blob([buffer], { type: type });
+    return new Blob(buffer, { type: type });
 }
 
 // Utility function to convert Blob to ArrayBuffer
