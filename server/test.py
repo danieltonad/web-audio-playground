@@ -33,7 +33,7 @@ def change_to_robotic(input_file, output_file):
     modulated_audio.export(output_file, format="wav")
 
 # Input and output files
-input_file = "input.wav"
+input_file = "./test.wav"
 output_file = "output_robotic.wav"
 
 # Apply robotic effect
