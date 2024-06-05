@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder with Robotic Voice Effect</title>
+</head>
+<body>
+    <h1>Voice Recorder with Robotic Voice Effect</h1>
+    <button id="recordButton">Record</button>
+    <button id="stopButton" disabled>Stop</button>
+    <h2>Recordings</h2>
+    <ul id="recordingsList"></ul>
+
+    <script>
+        const recordButton = document.getElementById('recordButton');
+const stopButton = document.getElementById('stopButton');
+const recordingsList = document.getElementById('recordingsList');
+
+let mediaRecorder;
+let audioChunks = [];
+let audioContext;
+let mediaStreamSource;
+let gainNode;
+let scriptProcessor;
+
+recordButton.addEventListener('click', async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+    // Create nodes for processing
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 0.5; // Reduce volume to avoid feedback
+    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    // Connect the nodes
+    mediaStreamSource.connect(gainNode);
+    gainNode.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+
+    // Create MediaRecorder
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+
+    recordButton.disabled = true;
+    stopButton.disabled = false;
+
+    mediaRecorder.addEventListener('dataavailable', event => {
+        audioChunks.push(event.data);
+    });
+
+    mediaRecorder.addEventListener('stop', () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = document.createElement('audio');
+        audio.src = audioUrl;
+        audio.controls = true;
+
+        const li = document.createElement('li');
+        li.appendChild(audio);
+        recordingsList.appendChild(li);
+
+        audioChunks = [];
+    });
+
+    // Apply the robotic voice effect
+    scriptProcessor.onaudioprocess = function(audioProcessingEvent) {
+        const inputBuffer = audioProcessingEvent.inputBuffer;
+        const outputBuffer = audioProcessingEvent.outputBuffer;
+
+        for (let channel = 0; channel < inputBuffer.numberOfChannels; channel++) {
+            const inputData = inputBuffer.getChannelData(channel);
+            const outputData = outputBuffer.getChannelData(channel);
+
+            for (let sample = 0; sample < inputBuffer.length; sample++) {
+                outputData[sample] = inputData[sample] * (1 + Math.sin(2 * Math.PI * 10 * sample / inputBuffer.sampleRate)); // Simple modulation for robotic effect
+            }
+        }
+    };
+});
+
+stopButton.addEventListener('click', () => {
+    mediaRecorder.stop();
+    recordButton.disabled = false;
+    stopButton.disabled = true;
+
+    gainNode.disconnect();
+    scriptProcessor.disconnect();
+    mediaStreamSource.disconnect();
+});
+
+    </script>
+</body>
+</html>

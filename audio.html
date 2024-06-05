@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder with Robotic Effect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Voice Recorder with Robotic Effect</h1>
+    <button id="start-recording">Start Recording</button>
+    <button id="stop-recording" disabled>Stop Recording</button>
+    <button id="play-robotic" disabled>Play Robotic Voice</button>
+    <audio id="audio-playback" controls></audio>
+    <script>
+    const startButton = document.getElementById('start-recording');
+    const stopButton = document.getElementById('stop-recording');
+    const playRoboticButton = document.getElementById('play-robotic');
+    const audioPlayback = document.getElementById('audio-playback');
+    
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioContext;
+    let audioBuffer;
+    
+    startButton.addEventListener('click', async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    
+    mediaRecorder.ondataavailable = event => {
+    audioChunks.push(event.data);
+    };
+    
+    mediaRecorder.onstop = async () => {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    audioPlayback.src = audioUrl;
+    audioChunks = [];
+    
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    playRoboticButton.disabled = false;
+    };
+    
+    mediaRecorder.start();
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    } else {
+    alert('Your browser does not support audio recording.');
+    }
+    });
+    
+    stopButton.addEventListener('click', () => {
+    mediaRecorder.stop();
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    });
+    
+    playRoboticButton.addEventListener('click', () => {
+    if (!audioBuffer) return;
+    
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    
+    // Creating a wave shaper for distortion
+    const waveShaper = audioContext.createWaveShaper();
+    waveShaper.curve = new Float32Array([0, 1, -1, 0, 1, -1, 0]); // Simple wave shape for robotic effect
+    waveShaper.oversample = '4x';
+    
+    // Creating a delay node for the metallic effect
+    const delay = audioContext.createDelay();
+    delay.delayTime.value = 0.05; // 50ms delay for a metallic robotic sound
+    
+    source.connect(waveShaper);
+    waveShaper.connect(delay);
+    delay.connect(audioContext.destination);
+    
+    source.start();
+    });
+    
+    
+    </script>
+</body>
+</html>
